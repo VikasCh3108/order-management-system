@@ -1,0 +1,15 @@
+.page {
+  padding: 20px;
+}
+
+.page h1 {
+  margin-bottom: 16px;
+  color: #333;
+  font-size: 2rem;
+}
+
+.page p {
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.6;
+}

@@ -1,0 +1,4 @@
+Alembic migration files live in `versions/`.
+Generate revisions with:
+
+    alembic revision --autogenerate -m "message"
