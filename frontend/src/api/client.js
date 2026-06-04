@@ -8,12 +8,48 @@ const client = axios.create({
   },
 });
 
-// Response interceptor for common error handling
+const RETRYABLE_STATUS = new Set([502, 503, 504]);
+const RETRY_DELAYS = [0, 5000, 15000]; // ms for attempts #1-3
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const shouldRetry = (error) => {
+  if (!error || !error.config) {
+    return false;
+  }
+
+  const method = error.config.method?.toLowerCase();
+  if (method !== 'get') {
+    return false;
+  }
+
+  if (!error.response) {
+    return error.code === 'ECONNABORTED' || error.message === 'Network Error';
+  }
+
+  return RETRYABLE_STATUS.has(error.response.status);
+};
+
+// Response interceptor for retry-aware error handling
 client.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Pass through errors for individual components to handle
-    return Promise.reject(error);
+  async (error) => {
+    if (!shouldRetry(error)) {
+      return Promise.reject(error);
+    }
+
+    const config = error.config;
+    const retryCount = config.__retryCount || 0;
+
+    if (retryCount >= RETRY_DELAYS.length - 1) {
+      return Promise.reject(error);
+    }
+
+    const nextAttemptIndex = retryCount + 1;
+    config.__retryCount = nextAttemptIndex;
+
+    await delay(RETRY_DELAYS[nextAttemptIndex]);
+    return client(config);
   }
 );
 
